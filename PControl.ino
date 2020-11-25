@@ -7,9 +7,9 @@
 
 // configurable parameters
 
-#define _DUTY_CW  1450 // clockwise position without breaking the framework
-#define _DUTY_HOR 1600 // natural position of servo in which the framework remains horizontal  
-#define _DUTY_CCW 1750 // counterclockwise position without breaking the framework
+#define _DUTY_HOR 1500 // natural position of servo in which the framework remains horizontal  
+#define _DUTY_CW  _DUTY_HOR - 150 // clockwise position without breaking the framework
+#define _DUTY_CCW _DUTY_HOR + 150 // counterclockwise position without breaking the framework
 
 #define _IR_ALPHA 67 // one of the variables used to calculate the dist_cali
 #define _IR_BETA 265 // one of the variables used to calculate the dist_cali
@@ -64,21 +64,18 @@ void loop()
 
   // calculate servo duty
 
-  float servo_duty = -1.0 * EMA_S + (float)_DUTY_CCW + 100.0;
+  float servo_duty = -0.8 * EMA_S + (float)_DUTY_CCW + 50;
 
   // control servo motor
-
- if((int)EMA_S == _DIST_TGT)
-    myservo.writeMicroseconds(_DUTY_HOR);
- else
+  
    myservo.writeMicroseconds((int)servo_duty);
 
  // debug code
 
-  Serial.print("min:0,max:500,dist:");
-  Serial.print(dist_raw);
-  Serial.print(",dist_cali:");
-  Serial.print(dist_cali);
+  Serial.print("min:0,max:500");
+//  Serial.print(dist_raw);
+//  Serial.print(",dist_cali:");
+//  Serial.print(dist_cali);
   Serial.print(",EMA:");
   Serial.print(EMA_S);
   Serial.print(",DUTY:");
