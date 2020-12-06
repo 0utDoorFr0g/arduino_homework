@@ -1,12 +1,15 @@
 #include <Servo.h>
 
+//////
 // 설정값
+//////
+
 #define PIN_SERVO 10
 #define PIN_IR A0
 
-#define _DUTY_MIN (_DUTY_NEU - 250) // 임의로 400정도 빼줌.
+#define _DUTY_MIN (_DUTY_NEU - 300) // 임의로 400정도 빼줌.
 #define _DUTY_NEU 1400 // 프레임워크에서 공이 안움직이는 구간.
-#define _DUTY_MAX (_DUTY_NEU + 250) // 임의로 400 정도 더해줌.
+#define _DUTY_MAX (_DUTY_NEU + 300) // 임의로 400 정도 더해줌.
 
 #define _EMA_ALPHA 0.1 // EMA 필터 계산값
 
@@ -18,12 +21,15 @@
 #define _DIST_MIN 100 // 공 최소 위치 
 #define _DIST_MAX 410 // 공 최대 위치
 
-#define _SERVO_SPEED 140        // servo 속도 설정
+#define _SERVO_SPEED 160        // servo 속도 설정
 
-#define _KP 0.0  // P Control 민감도
-#define _KD 150  // P Control 민감도
+#define _KP 1  // P Control 민감도
+#define _KD 200  // D Control 민감도
 
+//////
 // 전역변수
+//////
+
 Servo myservo; // 서보 클래스
 
 float dist_raw; // 적외선 센서가 측정한 탁구공 거리값을 저장
@@ -132,17 +138,10 @@ void loop()
     float dist_cali = ir_filter(dist_raw);
     ema_res = (_EMA_ALPHA * dist_cali) + ((1-_EMA_ALPHA) * ema_res); 
 
-    // p con
-
     error_curr = _DIST_TARGET - ema_res;
-    //pterm = error_curr * _KP;
-    //control = pterm;
-    //duty_target = _DUTY_NEU + control;
-
-    // d con
-
-    dterm = _KD * (error_curr - error_prev);
-    control = dterm;
+    pterm = _KP * error_curr;
+    dterm = _KD * (error_curr - error_prev);  
+    control = pterm + dterm;
     duty_target = _DUTY_NEU + control;
 
     if(duty_target > _DUTY_MAX) duty_target = _DUTY_MAX; // 상한성
@@ -172,15 +171,30 @@ void loop()
   if(event_serial)
   {
     event_serial = false;
-    Serial.print("ema:");
-    Serial.print(ema_res);
+    Serial.print("dist_ir:");
+    Serial.print(dist_raw);
+    Serial.print(",pterm:");
+    Serial.print(map(pterm,-1000,1000,510,610));
     Serial.print(",dterm:");
-    Serial.print(map(duty_target,1000,2000,100,410));
+    Serial.print(map(dterm,-1000,1000,510,610));
     Serial.print(",duty_target:");
-    Serial.print(map(duty_target,1000,2000,100,410));
+    Serial.print(map(duty_target,1000,2000,410,510));
     Serial.print(",duty_curr:");
-    Serial.print(map(duty_curr,1000,2000,100,410));
+    Serial.print(map(duty_curr,1000,2000,410,510));
     Serial.println(",Min:100,Low:200,dist_target:255,High:310,Max:410");
+
+//    Serial.print("dist_ir:");
+//    Serial.print(dist_raw);
+//    Serial.print(",pterm:");
+//    Serial.print(map(pterm,-1000,1000,510,610));
+//    Serial.print(",dterm:");
+//    Serial.print(map(dterm,-1000,1000,510,610));
+//    Serial.print(",duty_target:");
+//    Serial.print(map(duty_target,1000,2000,410,510));
+//    Serial.print(",duty_curr:");
+//    Serial.print(map(duty_curr,1000,2000,410,510));
+//    Serial.println(",Min:100,Low:200,dist_target:255,High:310,Max:410");
+    
     last_sampling_time_serial = millis();
   }
 }
