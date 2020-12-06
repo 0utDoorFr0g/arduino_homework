@@ -10,15 +10,17 @@
 
 #define _EMA_ALPHA 0.2 // EMA 필터 계산값
 
-#define _INTERVAL_DIST 20 // 거리 측정 주기
-#define _INTERVAL_SERVO 20 // 서보 조정 주기
-#define _INTERVAL_SERIAL 100 // 시리얼 출력 주기
+#define _INTERVAL_DIST 5 // 거리 측정 주기
+#define _INTERVAL_SERVO 5 // 서보 조정 주기
+#define _INTERVAL_SERIAL 25 // 시리얼 출력 주기
 
 #define _DIST_TARGET 255  // 공 목표위치
 #define _DIST_MIN 100 // 공 최소 위치 
 #define _DIST_MAX 410 // 공 최대 위치
 
-#define _SERVO_SPEED 100        // servo 속도 설정
+#define _SERVO_SPEED 140        // servo 속도 설정
+
+#define _KP 0.8  // P Control 민감도
 
 // 전역변수
 Servo myservo; // 서보 클래스
@@ -42,6 +44,12 @@ bool event_serial; // 시리얼 출력 관련 이벤트
 unsigned long last_sampling_time_dist; // 거리 측정 마지막 시간
 unsigned long last_sampling_time_servo; // 서보 조정 마지막 시간
 unsigned long last_sampling_time_serial; // 시리얼 출력 마지막 시간
+
+float error_curr;
+float error_prev;
+float control;
+float pterm; 
+float dterm;
 
 void setup() 
 {
@@ -116,23 +124,22 @@ void loop()
     float dist_cali = ir_filter(dist_raw);
     ema_res = (_EMA_ALPHA * dist_cali) + ((1-_EMA_ALPHA) * ema_res); 
 
+    // duty_target 계산 코드 추가 (비례 제어, 미분 제어)
+
+    error_curr = _DIST_TARGET - ema_res;
+    pterm = error_curr * _KP;
+    control = pterm;
+    duty_target = _DUTY_NEU + control;
+
+    if(duty_target > _DUTY_MAX) duty_target = _DUTY_MAX;
+    if(duty_target < _DUTY_MIN) duty_target = _DUTY_MIN;
+
     last_sampling_time_dist = millis();
   }
 
    if(event_servo)
    {
       event_servo = false;
-
-      // duty_target 계산 코드 추가 (비례 제어, 미분 제어)
-      // bang bang set
-      if(dist_tar > ema_res)
-        duty_target = _DUTY_MAX;
-      else if(dist_tar < ema_res)
-        duty_target = _DUTY_MIN;
-      else
-        duty_target = _DUTY_NEU;
-
-      // 서보 제어 코드 추가
 
       if(duty_target > duty_curr)
         duty_curr += duty_chg_per_interval;
@@ -151,8 +158,8 @@ void loop()
     Serial.print(dist_cali);
     Serial.print(",EMA_S:");
     Serial.print(ema_res);
-    //Serial.print(",pterm:");
-    //Serial.print(map(pterm,-1000,1000,510,610));
+    Serial.print(",pterm:");
+    Serial.print(map(pterm,-1000,1000,510,610));
     //Serial.print(",dterm:");
     //Serial.print(map(dterm,-1000,1000,510,610));
     Serial.print(",duty_target:");
