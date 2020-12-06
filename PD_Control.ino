@@ -8,7 +8,7 @@
 #define _DUTY_NEU 1400 // 프레임워크에서 공이 안움직이는 구간.
 #define _DUTY_MAX (_DUTY_NEU + 200) // 임의로 400 정도 더해줌.
 
-#define _EMA_ALPHA 0.2 // EMA 필터 계산값
+#define _EMA_ALPHA 0.5 // EMA 필터 계산값
 
 #define _INTERVAL_DIST 5 // 거리 측정 주기
 #define _INTERVAL_SERVO 5 // 서보 조정 주기
@@ -102,7 +102,7 @@ float ir_filter(float x)
   else if(x > 177.0 && x <= 224.0){val = 50.0 / 47.0 * x + 63;} // 250 ~ 300
   else if(x > 224.0 && x <= 264.0){val = 50.0 / 40.0 * x + 20;} // 300 ~ 350
   else if(x > 264.0 && x <= 354.0){val = 50.0 / 90.0 * x + 203;} // 350 ~ 400
-  else if(x > 354.0) {val = x + 50;} // 400 이상
+  else if(x > 354.0) {val = 0.7 *x + 153;} // 400 이상
 
   return val; // mm 단위로 보정된 센서 측정값을 반환
 }
@@ -155,15 +155,11 @@ void loop()
   {
     event_serial = false;
     Serial.print("dist_ir:");
-    Serial.print(dist_cali);
-    Serial.print(",EMA_S:");
     Serial.print(ema_res);
     Serial.print(",pterm:");
-    Serial.print(map(pterm,-1000,1000,510,610));
-    //Serial.print(",dterm:");
-    //Serial.print(map(dterm,-1000,1000,510,610));
+    Serial.print(pterm);
     Serial.print(",duty_target:");
-    Serial.print(map(duty_target,1000,2000,410,510));
+    Serial.print(map(duty_target,1000,2000,100,410));
     Serial.print(",duty_curr:");
     Serial.print(map(duty_curr,1000,2000,410,510));
     Serial.println(",Min:100,Low:200,dist_target:255,High:310,Max:410");
