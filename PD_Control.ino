@@ -24,7 +24,7 @@
 #define _SERVO_SPEED 160        // servo 속도 설정
 
 #define _KP 1  // P Control 민감도
-#define _KD 200  // D Control 민감도
+#define _KD 300  // D Control 민감도
 
 //////
 // 전역변수
@@ -198,3 +198,4 @@ void loop()
     last_sampling_time_serial = millis();
   }
 }
+
