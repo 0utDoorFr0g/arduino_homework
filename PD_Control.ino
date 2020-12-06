@@ -4,11 +4,11 @@
 #define PIN_SERVO 10
 #define PIN_IR A0
 
-#define _DUTY_MIN (_DUTY_NEU - 200) // 임의로 400정도 빼줌.
+#define _DUTY_MIN (_DUTY_NEU - 250) // 임의로 400정도 빼줌.
 #define _DUTY_NEU 1400 // 프레임워크에서 공이 안움직이는 구간.
-#define _DUTY_MAX (_DUTY_NEU + 200) // 임의로 400 정도 더해줌.
+#define _DUTY_MAX (_DUTY_NEU + 250) // 임의로 400 정도 더해줌.
 
-#define _EMA_ALPHA 0.5 // EMA 필터 계산값
+#define _EMA_ALPHA 0.1 // EMA 필터 계산값
 
 #define _INTERVAL_DIST 5 // 거리 측정 주기
 #define _INTERVAL_SERVO 5 // 서보 조정 주기
@@ -20,7 +20,8 @@
 
 #define _SERVO_SPEED 140        // servo 속도 설정
 
-#define _KP 0.8  // P Control 민감도
+#define _KP 0.0  // P Control 민감도
+#define _KD 150  // P Control 민감도
 
 // 전역변수
 Servo myservo; // 서보 클래스
@@ -78,6 +79,13 @@ void setup()
   last_sampling_time_servo = 0;
   last_sampling_time_serial = 0;
 
+    
+  error_curr = 0.0;
+  error_prev = 0.0;
+  control = 0.0;
+  pterm = 0.0; 
+  dterm = 0.0;
+
 
   // 보드레이트 설정
   Serial.begin(57600);
@@ -124,15 +132,25 @@ void loop()
     float dist_cali = ir_filter(dist_raw);
     ema_res = (_EMA_ALPHA * dist_cali) + ((1-_EMA_ALPHA) * ema_res); 
 
-    // duty_target 계산 코드 추가 (비례 제어, 미분 제어)
+    // p con
 
     error_curr = _DIST_TARGET - ema_res;
-    pterm = error_curr * _KP;
-    control = pterm;
+    //pterm = error_curr * _KP;
+    //control = pterm;
+    //duty_target = _DUTY_NEU + control;
+
+    // d con
+
+    dterm = _KD * (error_curr - error_prev);
+    control = dterm;
     duty_target = _DUTY_NEU + control;
 
-    if(duty_target > _DUTY_MAX) duty_target = _DUTY_MAX;
-    if(duty_target < _DUTY_MIN) duty_target = _DUTY_MIN;
+    if(duty_target > _DUTY_MAX) duty_target = _DUTY_MAX; // 상한성
+    if(duty_target < _DUTY_MIN) duty_target = _DUTY_MIN; // 하한선
+
+
+    // 과거 오차 정보 저장
+    error_prev = error_curr;
 
     last_sampling_time_dist = millis();
   }
@@ -154,14 +172,14 @@ void loop()
   if(event_serial)
   {
     event_serial = false;
-    Serial.print("dist_ir:");
+    Serial.print("ema:");
     Serial.print(ema_res);
-    Serial.print(",pterm:");
-    Serial.print(pterm);
+    Serial.print(",dterm:");
+    Serial.print(map(duty_target,1000,2000,100,410));
     Serial.print(",duty_target:");
     Serial.print(map(duty_target,1000,2000,100,410));
     Serial.print(",duty_curr:");
-    Serial.print(map(duty_curr,1000,2000,410,510));
+    Serial.print(map(duty_curr,1000,2000,100,410));
     Serial.println(",Min:100,Low:200,dist_target:255,High:310,Max:410");
     last_sampling_time_serial = millis();
   }
